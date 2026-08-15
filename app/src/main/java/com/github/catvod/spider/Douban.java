@@ -12,7 +12,6 @@ import com.github.catvod.net.OkHttp;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -58,7 +57,6 @@ public class Douban extends Spider {
         classes.add(new Class("rank_list_movie", "电影榜单"));
         classes.add(new Class("rank_list_tv", "电视剧榜单"));
 
-        // 首页推荐（实时热门）
         List<Vod> list = new ArrayList<>();
         try {
             String url = "http://api.douban.com/api/v2/subject_collection/subject_real_time_hotest/items" + APIKEY;
@@ -67,7 +65,6 @@ public class Douban extends Spider {
             list = parseList(arr);
         } catch (Exception ignored) { }
 
-        // 筛选规则（对应原 homeContent 内嵌 filters）
         JSONObject filters = new JSONObject();
         filters.put("hot_gaia", new JSONArray()
                 .put(new JSONObject().put("key", "sort").put("name", "排序").put("value", new JSONArray()
@@ -113,6 +110,7 @@ public class Douban extends Spider {
             page = 1;
         }
         int start = (page - 1) * 20;
+        // hot_gaia 接口返回 items，其余 subject_collection 系列返回 subject_collection_items
         String jsonKey = "subject_collection_items";
         String url;
 
@@ -137,20 +135,25 @@ public class Douban extends Spider {
                 url = SUBJ + list + "/items" + APIKEY + "&start=" + start + "&count=20";
                 break;
             }
-            case "movie": {
-                String sort = extend == null ? "T" : extend.getOrDefault("sort", "T");
-                String area = extend == null ? "全部" : extend.getOrDefault("地区", "全部");
-                url = "https://frodo.douban.com/api/v2/tv/recommend" + APIKEY
-                        + "&sort=" + sort + "&area=" + URLEncoder.encode(area)
+            case "hot_gaia": {
+                // hot_gaia 返回 items（不是 subject_collection_items）
+                jsonKey = "items";
+                url = "https://frodo.douban.com/api/v2/movie/hot_gaia" + APIKEY
                         + "&start=" + start + "&count=20";
                 break;
             }
-            default: { // hot_gaia
-                String sort = extend == null ? "recommend" : extend.getOrDefault("sort", "recommend");
-                String area = extend == null ? "全部" : extend.getOrDefault("area", "全部");
-                url = "https://frodo.douban.com/api/v2/movie/hot_gaia" + APIKEY
-                        + "&sort=" + sort + "&area=" + URLEncoder.encode(area)
+            case "movie": {
+                url = "https://frodo.douban.com/api/v2/subject_collection/movie_weekly_best/items" + APIKEY
                         + "&start=" + start + "&count=20";
+                break;
+            }
+            case "tv": {
+                String type = extend == null ? "tv_hot" : extend.getOrDefault("type", "tv_hot");
+                url = SUBJ + type + "/items" + APIKEY + "&start=" + start + "&count=20";
+                break;
+            }
+            default: { // 兜底：热播剧集
+                url = SUBJ + "tv_hot/items" + APIKEY + "&start=" + start + "&count=20";
                 break;
             }
         }
@@ -191,7 +194,7 @@ public class Douban extends Spider {
         return super.liveContent(url);
     }
 
-    /** 解析 subject_collection_items 列表 */
+    /** 解析列表 -> List&lt;Vod&gt; */
     private List<Vod> parseList(JSONArray arr) throws Exception {
         List<Vod> list = new ArrayList<>();
         if (arr == null) return list;
