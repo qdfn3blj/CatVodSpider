@@ -135,7 +135,8 @@ public class AppRJ extends Spider {
         vod.setVodId(ids.get(0));
         if (TextUtils.isEmpty(r)) return Result.string(vod);
         JSONObject d = new JSONObject(r).getJSONObject("data");
-        vod.setVodName(d.optString("vod_name"));
+        String vodName = d.optString("vod_name");
+        vod.setVodName(vodName);
         String pic = d.optString("vod_pic");
         if (TextUtils.isEmpty(pic)) pic = d.optString("vod_pic_thumb");
         vod.setVodPic(pic);
@@ -162,7 +163,7 @@ public class AppRJ extends Spider {
             if (urlsArr != null) for (int j = 0; j < urlsArr.length(); j++) {
                 JSONObject uo = urlsArr.getJSONObject(j);
                 String epName = uo.optString("name");
-                String url = parse.toString() + "|" + uo.optString("url") + "|" + ua + "|" + vod.getVodName() + "|" + uo.optString("nid");
+                String url = parse.toString() + "|" + uo.optString("url") + "|" + ua + "|" + vodName + "|" + uo.optString("nid");
                 eps.add(epName + "$" + url);
             }
             froms.add(name);
